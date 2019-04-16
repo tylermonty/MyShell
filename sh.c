@@ -31,7 +31,6 @@ int sh( int argc, char **argv, char **envp )
   char *homedir;
   struct pathelement *pathlist;
   glob_t gbuf;
-  pthread_t thread_id;
 
   if (pthread_mutex_init(&lock, NULL) != 0){
         printf("\n mutex init has failed\n");
@@ -312,6 +311,7 @@ int sh( int argc, char **argv, char **envp )
                 strncpy(tmp->element, args[1], strlen(args[1]));
                 tmp->next = NULL;
                 //if (first_run == 0){
+                pthread_t thread_id;
                   pthread_create(&thread_id, NULL, watchuserThreadFun, NULL);
                   //pthread_join(thread_id, NULL);
               //    first_run = 1;
