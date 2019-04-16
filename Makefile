@@ -2,8 +2,8 @@
 CC=gcc
 #CC=gcc -Wall
 
-mysh: sh.o get_path.o which.o where.o cd.o pwd.o list.o pid.o kill.o printenv.o watchuser.o main.c
-	$(CC) -pthread -g main.c sh.o get_path.o which.o where.o cd.o pwd.o list.o pid.o kill.o printenv.o watchuser.o -o mysh
+mysh: sh.o get_path.o which.o where.o cd.o pwd.o list.o pid.o kill.o printenv.o watchuser.o watchmail.o main.c
+	$(CC) -pthread -g main.c sh.o get_path.o which.o where.o cd.o pwd.o list.o pid.o kill.o printenv.o watchuser.o watchmail.o -o mysh
 #	$(CC) -g main.c sh.o get_path.o bash_getcwd.o -o mysh
 
 sh.o: sh.c sh.h
@@ -35,6 +35,9 @@ printenv.o: printenv.c
 
 watchuser.o: watchuser.c
 	$(CC) -g -c watchuser.c
+
+watchmail.o: watchmail.c
+	$(CC) -g -c watchmail.c
 
 get_path.o: get_path.c get_path.h
 	$(CC) -g -c get_path.c

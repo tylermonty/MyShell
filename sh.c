@@ -12,6 +12,8 @@
 #include <signal.h>
 #include <glob.h>
 #include <pthread.h>
+#include <sys/time.h>
+#include <time.h>
 #include "sh.h"
 
 #define BUFFERSIZE 2048
@@ -375,7 +377,12 @@ int sh( int argc, char **argv, char **envp )
 
           }
         }
-      }
+    }else if(strcmp(args[0], "watchmail") == 0){
+		if(argsct == 2){
+			pthread_t my_id;
+			pthread_create(&my_id, NULL, watchmailThreadFun, args[1]);
+		}
+	}
 
        /*  else  program to exec */
        else{
@@ -489,5 +496,32 @@ void *watchuserThreadFun(void *vargp){
     pthread_mutex_unlock(&lock);
     sleep(20);
   }
+  return NULL;
+}
+
+void *watchmailThreadFun(void *vargp){
+  //printf("print from thread\n");
+  	char * dir = (char *) vargp;
+	off_t filesize = 0;
+	struct stat stat_buf, new_stat_buf;
+	struct timeval time_buf;
+	if(stat(dir, &stat_buf) < 0){
+		perror("stat error");
+	}else{
+		filesize = stat_buf.st_size;
+		while(1){
+			//pthread_mutex_lock(&lock);
+			if(stat(dir, &stat_buf) < 0)
+				perror("stat error");
+			else{	
+				if(filesize < stat_buf.st_size){
+					gettimeofday(&time_buf, NULL);
+					printf("\a You've Got Mail in %s at %s\n", dir, ctime(&(time_buf.tv_sec)));
+				}	
+				filesize = stat_buf.st_size;
+			}	
+			sleep(1);
+		}
+	}
   return NULL;
 }

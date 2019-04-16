@@ -8,6 +8,7 @@ struct pathelement *user_list;
 int sh( int argc, char **argv, char **envp);
 void freeList(struct pathelement* head);
 void *watchuserThreadFun(void *vargp);
+void *watchmailThreadFun(void *vargp);
 char *which(char *command, struct pathelement *pathlist);
 char *where(char *command, struct pathelement *pathlist);
 void list ( char *dir );
