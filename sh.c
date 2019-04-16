@@ -472,7 +472,7 @@ int sh( int argc, char **argv, char **envp )
      }
   }
   pthread_mutex_destroy(&lock);
-  pthread_cancel(thread_id);
+  //pthread_cancel(thread_id);
   return 0;
 }
 
@@ -513,13 +513,13 @@ void *watchmailThreadFun(void *vargp){
 			//pthread_mutex_lock(&lock);
 			if(stat(dir, &stat_buf) < 0)
 				perror("stat error");
-			else{	
+			else{
 				if(filesize < stat_buf.st_size){
 					gettimeofday(&time_buf, NULL);
 					printf("\a You've Got Mail in %s at %s\n", dir, ctime(&(time_buf.tv_sec)));
-				}	
+				}
 				filesize = stat_buf.st_size;
-			}	
+			}
 			sleep(1);
 		}
 	}
