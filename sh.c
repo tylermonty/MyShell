@@ -379,8 +379,59 @@ int sh( int argc, char **argv, char **envp )
         }
     }else if(strcmp(args[0], "watchmail") == 0){
 		if(argsct == 2){
-			pthread_t my_id;
-			pthread_create(&my_id, NULL, watchmailThreadFun, args[1]);
+			ThreadNode *tmp;
+			int unique = 1;
+			if(mailList){//already threads active
+				tmp = mailList;
+				if((unique = strcmp(tmp->fileDesc, args[1])) == 0){
+					printf("Already watching file: %s\n", tmp->fileDesc);
+				}
+				while(tmp->next){	
+					tmp = tmp->next;
+					if((unique = strcmp(tmp->fileDesc, args[1])) == 0){
+						printf("Already watching file: %s\n", tmp->fileDesc);
+					}	
+				}//add thread to end of list
+				if(unique){
+					tmp->next = malloc(sizeof(ThreadNode*));
+					tmp->next->next = NULL;
+					tmp = tmp->next;
+				}
+			}else{//new list of threads
+				mailList = malloc(sizeof(ThreadNode*));
+				mailList->next = NULL;
+				tmp = mailList;
+			}
+			if(unique){
+				tmp->fileDesc = malloc(strlen(args[1])*sizeof(char));
+				strncpy(tmp->fileDesc, args[1], strlen(args[1])+1);
+				tmp->fileDesc[strlen(args[1])] = '\0';
+				pthread_create(&(tmp->id), NULL, watchmailThreadFun, tmp->fileDesc);
+			}
+		}else if(argsct == 3 && strcmp(args[2], "off") == 0){
+			ThreadNode *tmp, *prev;//turn thread off
+			tmp = mailList;
+			while(tmp && strcmp(tmp->fileDesc, args[1]) != 0){
+				prev = tmp;//search for matching file description
+				tmp = tmp->next;
+			}
+			if(tmp && strcmp(tmp->fileDesc, args[1]) == 0){//found
+				if(tmp == mailList){//head node
+					mailList = mailList->next;//move head down
+					printf("%s mail watcher off\n", tmp->fileDesc);
+					free(tmp->fileDesc);
+					pthread_cancel(tmp->id);
+					free(tmp);
+				}else{
+					prev->next = tmp->next;//rearrange pointers
+					printf("%s mail watcher off\n", tmp->fileDesc);
+					free(tmp->fileDesc);
+					pthread_cancel(tmp->id);
+					free(tmp);
+				}
+			}else{
+				printf("no watcher found for %s\n", args[1]);
+			}
 		}
 	}
 
@@ -507,13 +558,15 @@ void *watchmailThreadFun(void *vargp){
 	struct timeval time_buf;
 	if(stat(dir, &stat_buf) < 0){
 		perror("stat error");
+		pthread_exit(0);
 	}else{
 		filesize = stat_buf.st_size;
 		while(1){
 			//pthread_mutex_lock(&lock);
-			if(stat(dir, &stat_buf) < 0)
+			if(stat(dir, &stat_buf) < 0){
 				perror("stat error");
-			else{
+				pthread_exit(0);
+			}else{
 				if(filesize < stat_buf.st_size){
 					gettimeofday(&time_buf, NULL);
 					printf("\a You've Got Mail in %s at %s\n", dir, ctime(&(time_buf.tv_sec)));

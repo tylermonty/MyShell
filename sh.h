@@ -5,6 +5,13 @@
 
 struct pathelement *user_list;
 
+typedef struct ThreadNode{
+	pthread_t id;
+	char* fileDesc;
+	struct ThreadNode * next;
+} ThreadNode;
+
+ThreadNode *mailList;
 int sh( int argc, char **argv, char **envp);
 void freeList(struct pathelement* head);
 void *watchuserThreadFun(void *vargp);
