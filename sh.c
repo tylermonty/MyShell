@@ -378,7 +378,7 @@ int sh( int argc, char **argv, char **envp )
           }
         }
     }else if(strcmp(args[0], "watchmail") == 0){
-		if(argsct == 2){
+		if(argsct == 2 && access(args[1], F_OK) == 0){
 			ThreadNode *tmp;
 			int unique = 1;
 			if(mailList){//already threads active
@@ -408,7 +408,7 @@ int sh( int argc, char **argv, char **envp )
 				tmp->fileDesc[strlen(args[1])] = '\0';
 				pthread_create(&(tmp->id), NULL, watchmailThreadFun, tmp->fileDesc);
 			}
-		}else if(argsct == 3 && strcmp(args[2], "off") == 0){
+		}else if(argsct == 3 && access(args[1], F_OK) == 0 && strcmp(args[2], "off") == 0){
 			ThreadNode *tmp, *prev;//turn thread off
 			tmp = mailList;
 			while(tmp && strcmp(tmp->fileDesc, args[1]) != 0){
@@ -430,8 +430,16 @@ int sh( int argc, char **argv, char **envp )
 					free(tmp);
 				}
 			}else{
-				printf("no watcher found for %s\n", args[1]);
+				printf("no mail watcher found for %s\n", args[1]);
 			}
+		}else if(argsct == 2 || (argsct == 3 && strcmp(args[2], "off") == 0)){
+			printf("Could not access file %s\n", args[1]);
+		}else if(argsct > 3){
+			fprintf(stderr, "watchmail: Too many arguments\n");
+		}else if(argsct == 3){
+			fprintf(stderr, "watchmail: unrecognized second argument\n");
+		}else{
+			fprintf(stderr, "watchmail: Too few arguments\n");
 		}
 	}
 
