@@ -454,10 +454,28 @@ int sh( int argc, char **argv, char **envp )
          char *cmd = strdup(args[0]);
          glob_t gbuf;
          int i = 1;
+         char *cmd_path;
+
 
          if (strcmp(args[argsct - 1], "&") == 0){ //check if background process
            background = 1;
            args[argsct - 1] = NULL;
+           argsct--;
+         }
+         if (cmd[0] == '.' || cmd[0] == '/'){ //absolute path
+           cmd_path = cmd;
+         }
+         else{
+           cmd_path = which(cmd, pathlist); //find path
+         }
+         size_t len = strlen(cmd_path);
+         if (cmd_path[len - 1] == '\n'){ //change /n to /0
+           cmd_path[len - 1] = '\0';
+         }
+         struct stat buf; //used to tell path is a file
+         stat(cmd_path, &buf);
+         if (S_ISREG(buf.st_mode) && (access(cmd_path, X_OK) == 0)){
+           printf("Executing %s\n", cmd);
          }
          pid = fork();
          if (pid == -1){ //error
@@ -466,22 +484,6 @@ int sh( int argc, char **argv, char **envp )
          }
          else if (pid == 0){ //child
           // printf("child process, pid = %u\n",getpid());
-           char *cmd_path;
-           if (cmd[0] == '.' || cmd[0] == '/'){ //absolute path
-             cmd_path = cmd;
-           }
-           else{
-             cmd_path = which(cmd, pathlist); //find path
-           }
-           size_t len = strlen(cmd_path);
-           if (cmd_path[len - 1] == '\n'){ //change /n to /0
-             cmd_path[len - 1] = '\0';
-           }
-           struct stat buf; //used to tell path is a file
-           stat(cmd_path, &buf);
-           if (S_ISREG(buf.st_mode) && (access(cmd_path, X_OK) == 0)){
-             printf("Executing %s\n", cmd);
-           }
            if (execve(cmd_path, args, environ) < 0){ //exec command
              printf("%s: Command not found.\n", cmd);
              break;
@@ -493,6 +495,7 @@ int sh( int argc, char **argv, char **envp )
                 if (WIFEXITED(status) && (WEXITSTATUS(status) != 0))
                   printf("Exited with %d\n", WEXITSTATUS(status));
                 }
+                signal(SIGCHLD, SIG_IGN);
            }
            else{ //not background process
              if (waitpid(pid, &status, 0) > 0) {
@@ -502,6 +505,7 @@ int sh( int argc, char **argv, char **envp )
             }
           }
         free(cmd);
+        background = 0;
        }
 
       int index = 0;
