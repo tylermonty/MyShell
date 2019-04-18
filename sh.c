@@ -26,7 +26,7 @@ int sh( int argc, char **argv, char **envp )
   char *commandline = calloc(MAX_CANON, sizeof(char));
   char *cwd, *owd;
   char **args = calloc(MAXARGS+1, sizeof(char*));
-  int uid, i, status, argsct, go = 1;
+  int uid, i, status, argsct, go = 1, background = 0;
   struct passwd *password_entry;
   char *homedir;
   struct pathelement *pathlist;
@@ -117,7 +117,7 @@ int sh( int argc, char **argv, char **envp )
       /* check for each built in command and implement */
       //exit
       if (strcmp(commandline, "exit") == 0){  //if exit, exit my shell
-        printf("exit\n");
+        printf("Executing built-in exit\n");
         break;
       }
       //which
@@ -377,7 +377,11 @@ int sh( int argc, char **argv, char **envp )
 
           }
         }
-    }else if(strcmp(args[0], "watchmail") == 0){
+
+    }
+
+    //watchmail
+    else if(strcmp(args[0], "watchmail") == 0){
 		if(argsct == 2 && access(args[1], F_OK) == 0){
 			ThreadNode *tmp;
 			int unique = 1;
@@ -386,11 +390,11 @@ int sh( int argc, char **argv, char **envp )
 				if((unique = strcmp(tmp->fileDesc, args[1])) == 0){
 					printf("Already watching file: %s\n", tmp->fileDesc);
 				}
-				while(tmp->next){	
+				while(tmp->next){
 					tmp = tmp->next;
 					if((unique = strcmp(tmp->fileDesc, args[1])) == 0){
 						printf("Already watching file: %s\n", tmp->fileDesc);
-					}	
+					}
 				}//add thread to end of list
 				if(unique){
 					tmp->next = malloc(sizeof(ThreadNode*));
@@ -450,18 +454,11 @@ int sh( int argc, char **argv, char **envp )
          char *cmd = strdup(args[0]);
          glob_t gbuf;
          int i = 1;
-         /*
-         while(args[i] && (i < MAXARGS)){
-           if(args[i] && ((strchr(args[i], '*') != NULL) || (strchr(args[i], '?') != NULL))){
-             glob(args[i], 0, NULL, &gbuf);
-           }
-           i++;
+
+         if (strcmp(args[argsct - 1], "&") == 0){ //check if background process
+           background = 1;
+           args[argsct - 1] = NULL;
          }
-         i = 1;
-         while(gbuf.gl_pathv[i] && (i < MAXARGS)){
-           args[i] = gbuf.gl_pathv[i];
-         }
-         */
          pid = fork();
          if (pid == -1){ //error
            printf("can't fork, error occured\n");
@@ -491,11 +488,18 @@ int sh( int argc, char **argv, char **envp )
            }
          }
          else{ //parent
-           //printf("parent process, pid = %u\n",getppid());
-          if (waitpid(pid, &status, 0) > 0) {
-              if (WIFEXITED(status) && (WEXITSTATUS(status) != 0))
-                printf("Exited with %d\n", WEXITSTATUS(status));
+           if (background){ //if background process, waitpid with WNOHANG
+             if (waitpid(pid, &status, WNOHANG) > 0) {
+                if (WIFEXITED(status) && (WEXITSTATUS(status) != 0))
+                  printf("Exited with %d\n", WEXITSTATUS(status));
+                }
+           }
+           else{ //not background process
+             if (waitpid(pid, &status, 0) > 0) {
+                if (WIFEXITED(status) && (WEXITSTATUS(status) != 0))
+                  printf("Exited with %d\n", WEXITSTATUS(status));
               }
+            }
           }
         free(cmd);
        }
