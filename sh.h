@@ -12,6 +12,8 @@ typedef struct ThreadNode{
 } ThreadNode;
 
 ThreadNode *mailList;
+int noclobber;
+
 int sh( int argc, char **argv, char **envp);
 void freeList(struct pathelement* head);
 void *watchuserThreadFun(void *vargp);
