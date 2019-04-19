@@ -1,3 +1,4 @@
+#include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
@@ -31,7 +32,7 @@ int sh( int argc, char **argv, char **envp )
   char *homedir;
   struct pathelement *pathlist;
   glob_t gbuf;
-
+  noclobber = 0;
   if (pthread_mutex_init(&lock, NULL) != 0){
         printf("\n mutex init has failed\n");
         return 1;
@@ -445,8 +446,10 @@ int sh( int argc, char **argv, char **envp )
 		}else{
 			fprintf(stderr, "watchmail: Too few arguments\n");
 		}
+	}else if(strcmp(args[0], "noclobber") == 0){
+		noclobber = !noclobber;
+		printf("%d", noclobber);
 	}
-
        /*  else  program to exec */
        else{
          pid_t  pid;
@@ -455,7 +458,6 @@ int sh( int argc, char **argv, char **envp )
          glob_t gbuf;
          int i = 1;
          char *cmd_path;
-
 
          if (strcmp(args[argsct - 1], "&") == 0){ //check if background process
            background = 1;
@@ -482,8 +484,64 @@ int sh( int argc, char **argv, char **envp )
            printf("can't fork, error occured\n");
            exit(EXIT_FAILURE);
          }
-         else if (pid == 0){ //child
-          // printf("child process, pid = %u\n",getpid());
+         else if (pid == 0){ //child 
+		 int j, fid, redirected = 0;
+		 for(j = 0; j < argsct; j++){
+			if(j+1 < argsct){
+				if(strcmp(args[j], ">") == 0){
+					if(!noclobber)
+						fid = open(args[j+1], O_WRONLY|O_CREAT|O_TRUNC, S_IRWXU);
+					else
+						fid = open(args[j+1], O_WRONLY|O_CREAT, S_IRWXU);
+					close(1);
+					dup(fid);
+					close(fid);
+					redirected = 1;
+				}else if(strcmp(args[j], ">&") == 0){
+					if(!noclobber)
+						fid = open(args[j+1], O_WRONLY|O_CREAT|O_TRUNC, S_IRWXU);
+					else
+						fid = open(args[j+1], O_WRONLY|O_CREAT, S_IRWXU);
+					close(STDOUT_FILENO);
+					dup(fid);
+					close(STDERR_FILENO);
+					dup(fid);
+					close(fid);
+					redirected = 2;
+				}else if(strcmp(args[j], ">>") == 0){	
+					if(!noclobber)
+						fid = open(args[j+1], O_WRONLY|O_CREAT|O_APPEND, S_IRWXU);
+					else
+						fid = open(args[j+1], O_WRONLY|O_APPEND);
+					close(1);
+					dup(fid);
+					close(fid);
+					redirected = 1;
+				}else if(strcmp(args[j], ">>&") == 0){	
+					if(!noclobber)
+						fid = open(args[j+1], O_WRONLY|O_CREAT|O_APPEND, S_IRWXU);
+					else
+						fid = open(args[j+1], O_WRONLY|O_APPEND);
+					close(1);
+					close(2);
+					dup(fid);
+					dup(fid);
+					close(fid);
+					redirected = 2;
+				}else if(strcmp(args[j], "<") == 0){	
+					fid = open(args[j+1], O_RDONLY);
+					close(STDIN_FILENO);
+					dup(fid);
+					close(fid);
+					redirected = 3;
+				}
+				if(redirected){
+					for(j; j < argsct; j++)
+						args[j] = NULL;
+				}
+			}
+		 }
+			// printf("child process, pid = %u\n",getpid());
            if (execve(cmd_path, args, environ) < 0){ //exec command
              printf("%s: Command not found.\n", cmd);
              break;
@@ -499,8 +557,9 @@ int sh( int argc, char **argv, char **envp )
            }
            else{ //not background process
              if (waitpid(pid, &status, 0) > 0) {
-                if (WIFEXITED(status) && (WEXITSTATUS(status) != 0))
+				if (WIFEXITED(status) && (WEXITSTATUS(status) != 0))
                   printf("Exited with %d\n", WEXITSTATUS(status));
+				
               }
             }
           }
