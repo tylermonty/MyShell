@@ -18,7 +18,7 @@ int sh( int argc, char **argv, char **envp);
 void freeList(struct pathelement* head);
 void *watchuserThreadFun(void *vargp);
 void *watchmailThreadFun(void *vargp);
-void execute_builtin(char *prompt, char *commandline, char **args, int argsct, struct pathelement *pathlist, char **environ);
+void execute_command(int pipe_info, char **args, int argsct, struct pathelement *pathlist, char **environ);
 char *which(char *command, struct pathelement *pathlist);
 char *where(char *command, struct pathelement *pathlist);
 void list ( char *dir );
