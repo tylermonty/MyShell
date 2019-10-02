@@ -16,6 +16,7 @@ int main( int argc, char **argv, char **envp )
   return sh(argc, argv, envp);
 }
 
+//signal handler
 void sig_handler(int signal)
 {
   printf("\ncaught signal [%d]\n", signal);
